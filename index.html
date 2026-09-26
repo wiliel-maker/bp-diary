@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Дневник давления</title>
-<meta name="description" content="Личный трекер артериального давления и пульса с категориями по шкале AHA.">
+<meta name="description" content="Личный трекер артериального давления и пульса. Записи сохраняются в репозиторий на GitHub.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
   :root {
@@ -121,6 +121,43 @@
     font-weight: 600;
     margin-bottom: 14px;
   }
+  a { color: var(--accent); }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+
+  /* sync status */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+  .sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .sync.ok { background: var(--good-bg); color: var(--good-ink); }
+  .sync.busy { background: var(--elevated-bg); color: var(--elevated-ink); }
+  .sync.error { background: var(--stage2-bg); color: var(--stage2-ink); }
+
+  /* banners */
+  .banner {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+    background: var(--elevated-bg);
+    color: var(--elevated-ink);
+  }
+  .banner.error { background: var(--stage2-bg); color: var(--stage2-ink); }
+  .banner p { margin: 0; flex: 1 1 260px; }
 
   /* summary */
   .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 32px; }
@@ -165,6 +202,7 @@
   .field.date input { width: 150px; }
   .field.time input { width: 110px; }
   .field.note { flex: 1 1 160px; }
+  .field.token { flex: 1 1 260px; }
   .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   button[type="submit"] {
     font: inherit;
@@ -178,7 +216,9 @@
     height: 38px;
   }
   button[type="submit"]:hover { filter: brightness(1.05); }
+  button[disabled] { opacity: 0.6; cursor: wait; }
   .form-error { color: var(--stage2-ink); font-size: 13px; margin: 0; flex-basis: 100%; }
+  .form-ok { color: var(--good-ink); font-size: 13px; margin: 0; flex-basis: 100%; }
   .segmented { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: 38px; }
   .seg-btn {
     font: inherit;
@@ -254,10 +294,13 @@
   .legend .swatch.crisis { background: var(--crisis-ink); }
   .legend .range { color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-left: auto; }
 
-  /* data management */
-  .data-section p { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 60ch; }
+  /* data & github */
+  .data-section p, .gh-section p { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 60ch; }
+  .gh-section ol { color: var(--muted); font-size: 13px; margin: 0 0 14px; padding-left: 20px; max-width: 60ch; }
+  .gh-section li { margin-bottom: 4px; }
   .data-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .data-status { font-size: 13px; color: var(--muted); }
+  .gh-connected { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; }
 </style>
 </head>
@@ -265,10 +308,28 @@
 
 <div class="page">
   <header>
-    <p class="eyebrow">Домашний мониторинг</p>
-    <h1>Дневник давления</h1>
-    <p class="subtitle">Записывайте систолическое и диастолическое давление и пульс — история и категория по каждому измерению сохраняются в этом браузере.</p>
+    <div class="topbar">
+      <div>
+        <p class="eyebrow">Домашний мониторинг</p>
+        <h1>Дневник давления</h1>
+      </div>
+      <span class="sync" id="sync">Загрузка…</span>
+    </div>
+    <p class="subtitle">Записывайте систолическое и диастолическое давление и пульс. Каждое измерение сохраняется в репозиторий на GitHub и доступно с любого устройства.</p>
   </header>
+
+  <div class="banner error" id="global-error" hidden><p id="global-error-text"></p></div>
+
+  <div class="banner" id="token-banner" hidden>
+    <p>Записи с GitHub загружены, но без токена сайт не сможет их сохранять. Подключите GitHub в разделе «Хранение» внизу страницы.</p>
+    <a class="ghost-btn" href="#github">Подключить</a>
+  </div>
+
+  <div class="banner" id="local-banner" hidden>
+    <p>В этом браузере остались записи из старой версии дневника: <strong id="local-count"></strong>. Перенести их в репозиторий?</p>
+    <button type="button" class="ghost-btn" id="local-import-btn">Перенести</button>
+    <button type="button" class="ghost-btn" id="local-discard-btn">Удалить</button>
+  </div>
 
   <section class="summary" id="summary">
     <p class="summary-empty">Пока нет ни одного измерения.</p>
@@ -362,9 +423,36 @@
     </ul>
   </section>
 
+  <section class="gh-section" id="github">
+    <h2>Хранение</h2>
+    <p>Записи лежат в файле <code id="gh-path"></code> в репозитории <code id="gh-repo"></code>. Чтобы сайт мог их сохранять, нужен токен GitHub. Он хранится только в этом браузере и никуда, кроме api.github.com, не отправляется.</p>
+
+    <div class="gh-connected" id="gh-connected" hidden>
+      <span>GitHub подключён<span id="gh-user"></span>.</span>
+      <button type="button" class="ghost-btn" id="gh-disconnect">Отключить</button>
+    </div>
+
+    <div id="gh-setup">
+      <ol>
+        <li>Откройте <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+        <li>Repository access: <strong>Only select repositories</strong> → выберите этот репозиторий.</li>
+        <li>Permissions → Repository permissions → <strong>Contents: Read and write</strong>. Больше ничего не нужно.</li>
+        <li>Выберите срок действия подольше, создайте токен и вставьте его сюда.</li>
+      </ol>
+      <form id="token-form">
+        <div class="field token">
+          <label for="f-token">Токен</label>
+          <input id="f-token" type="password" autocomplete="off" placeholder="github_pat_…" required>
+        </div>
+        <button type="submit" id="token-btn">Подключить</button>
+        <p class="form-error" id="token-error" hidden></p>
+      </form>
+    </div>
+  </section>
+
   <section class="data-section">
     <h2>Данные</h2>
-    <p>Записи хранятся только в этом браузере на этом устройстве (localStorage) — сайт не отправляет их никуда. Чтобы перенести историю на другое устройство или сохранить резервную копию, экспортируйте её в файл и импортируйте там.</p>
+    <p>Экспорт даёт резервную копию истории в файле. Импорт добавляет записи из такого файла в дневник.</p>
     <div class="data-actions">
       <button type="button" class="ghost-btn" id="export-btn">Экспортировать в файл</button>
       <button type="button" class="ghost-btn" id="import-btn">Импортировать из файла</button>
@@ -373,35 +461,160 @@
     </div>
   </section>
 
-  <footer>Дневник давления · данные не покидают это устройство</footer>
+  <footer>Дневник давления · <a id="gh-link" href="#" target="_blank" rel="noopener">файл с записями на GitHub</a></footer>
 </div>
 
+<script src="config.js"></script>
 <script>
 (function () {
-  var STORAGE_KEY = 'bp-diary-readings-v1';
+  var LEGACY_KEY = 'bp-diary-readings-v1';
+  var TOKEN_KEY = 'bp-diary-github-token';
+  var API = 'https://api.github.com';
 
-  var form = document.getElementById('add-form');
-  var addBtn = document.getElementById('add-btn');
-  var formError = document.getElementById('form-error');
-  var summaryEl = document.getElementById('summary');
-  var tbody = document.getElementById('tbody');
-  var table = document.getElementById('table');
-  var emptyState = document.getElementById('empty-state');
-  var countEl = document.getElementById('count');
-  var detailsToggle = document.getElementById('details-toggle');
-  var dailyBlocksEl = document.getElementById('daily-blocks');
-  var exportBtn = document.getElementById('export-btn');
-  var importBtn = document.getElementById('import-btn');
-  var importFile = document.getElementById('import-file');
-  var dataStatus = document.getElementById('data-status');
+  // ---------- где лежат данные ----------
+  var cfg = window.BP_CONFIG || {};
+  var repo = detectRepo();
+  function detectRepo() {
+    var r = { owner: cfg.owner || '', repo: cfg.repo || '', branch: cfg.branch || 'main', path: cfg.path || 'data/readings.json' };
+    // Сайт на GitHub Pages: логин.github.io/репозиторий/
+    var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname);
+    if (m) {
+      var seg = location.pathname.split('/').filter(Boolean)[0];
+      r.owner = m[1];
+      if (seg && !/\.html?$/i.test(seg)) r.repo = seg;
+      else if (!r.repo) r.repo = m[1] + '.github.io';
+    }
+    return r;
+  }
 
-  var fSys = document.getElementById('f-sys');
-  var fDia = document.getElementById('f-dia');
-  var fPulse = document.getElementById('f-pulse');
-  var fDate = document.getElementById('f-date');
-  var fTime = document.getElementById('f-time');
-  var fNote = document.getElementById('f-note');
+  // ---------- элементы ----------
+  function $(id) { return document.getElementById(id); }
+  var syncEl = $('sync');
+  var globalError = $('global-error'), globalErrorText = $('global-error-text');
+  var tokenBanner = $('token-banner');
+  var localBanner = $('local-banner'), localCount = $('local-count'), localImportBtn = $('local-import-btn'), localDiscardBtn = $('local-discard-btn');
+  var form = $('add-form'), addBtn = $('add-btn'), formError = $('form-error');
+  var summaryEl = $('summary'), tbody = $('tbody'), table = $('table'), emptyState = $('empty-state'), countEl = $('count');
+  var detailsToggle = $('details-toggle'), dailyBlocksEl = $('daily-blocks');
+  var exportBtn = $('export-btn'), importBtn = $('import-btn'), importFile = $('import-file'), dataStatus = $('data-status');
+  var fSys = $('f-sys'), fDia = $('f-dia'), fPulse = $('f-pulse'), fDate = $('f-date'), fTime = $('f-time'), fNote = $('f-note');
+  var ghConnected = $('gh-connected'), ghSetup = $('gh-setup'), ghUser = $('gh-user'), ghDisconnect = $('gh-disconnect');
+  var tokenForm = $('token-form'), fToken = $('f-token'), tokenBtn = $('token-btn'), tokenError = $('token-error');
 
+  $('gh-path').textContent = repo.path;
+  $('gh-repo').textContent = repo.owner + '/' + repo.repo;
+  $('gh-link').href = 'https://github.com/' + repo.owner + '/' + repo.repo + '/blob/' + repo.branch + '/' + repo.path;
+
+  // ---------- состояние ----------
+  var state = { readings: [], sha: null, token: getToken(), loaded: false };
+
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(t) { try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {} state.token = t || ''; }
+
+  function setSync(kind, text) { syncEl.className = 'sync ' + kind; syncEl.textContent = text; }
+  function showGlobalError(text) { globalErrorText.textContent = text || ''; globalError.hidden = !text; }
+  function showMsg(el, text) { el.textContent = text; el.hidden = !text; }
+
+  // ---------- GitHub API ----------
+  function ghHeaders() {
+    var h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (state.token) h['Authorization'] = 'Bearer ' + state.token;
+    return h;
+  }
+  function contentsUrl() {
+    return API + '/repos/' + encodeURIComponent(repo.owner) + '/' + encodeURIComponent(repo.repo) + '/contents/' +
+      repo.path.split('/').map(encodeURIComponent).join('/');
+  }
+  function utf8ToBase64(str) {
+    var bytes = new TextEncoder().encode(str), bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function base64ToUtf8(b64) {
+    var bin = atob(b64.replace(/\s/g, '')), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function describeHttpError(status, body) {
+    var msg = body && body.message ? body.message : '';
+    if (status === 401) return 'GitHub не принял токен. Проверьте, что он скопирован целиком и не истёк.';
+    if (status === 403 && /rate limit/i.test(msg)) return 'GitHub ограничил число запросов. Подключите токен или подождите час.';
+    if (status === 403) return 'Токен не даёт права на запись в этот репозиторий. Нужно разрешение Contents: Read and write.';
+    if (status === 404) return 'Репозиторий ' + repo.owner + '/' + repo.repo + ' не найден или токен не имеет к нему доступа.';
+    if (status === 409 || status === 422) return 'Файл изменился на GitHub, пока вы работали. Обновите страницу и повторите.';
+    return 'GitHub ответил ошибкой ' + status + (msg ? ': ' + msg : '') + '.';
+  }
+  function ghFetch(url, opts) {
+    return fetch(url, opts).then(function (res) {
+      return res.text().then(function (text) {
+        var body = null;
+        try { body = text ? JSON.parse(text) : null; } catch (e) {}
+        return { status: res.status, ok: res.ok, body: body };
+      });
+    }, function () {
+      throw new Error('Нет связи с GitHub. Проверьте интернет.');
+    });
+  }
+
+  // Читаем файл с записями. Возвращает { list, sha }.
+  function fetchRemote() {
+    return ghFetch(contentsUrl() + '?ref=' + encodeURIComponent(repo.branch) + '&t=' + Date.now(), { headers: ghHeaders(), cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 404) return { list: [], sha: null };
+        if (!r.ok) throw new Error(describeHttpError(r.status, r.body));
+        var list = [];
+        try { list = JSON.parse(base64ToUtf8(r.body.content || '')); } catch (e) { list = []; }
+        return { list: Array.isArray(list) ? list : [], sha: r.body.sha };
+      });
+  }
+
+  // Записываем файл. При конфликте перечитываем и применяем изменение заново.
+  function commit(mutate, message, attempt) {
+    attempt = attempt || 0;
+    var next = mutate(state.readings.slice());
+    var payload = {
+      message: message,
+      content: utf8ToBase64(JSON.stringify(next, null, 2) + '\n'),
+      branch: repo.branch
+    };
+    if (state.sha) payload.sha = state.sha;
+    return ghFetch(contentsUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(payload) })
+      .then(function (r) {
+        if ((r.status === 409 || r.status === 422) && attempt < 2) {
+          return fetchRemote().then(function (remote) {
+            state.readings = sortReadings(remote.list);
+            state.sha = remote.sha;
+            return commit(mutate, message, attempt + 1);
+          });
+        }
+        if (!r.ok) throw new Error(describeHttpError(r.status, r.body));
+        state.readings = sortReadings(next);
+        state.sha = r.body.content.sha;
+        return r.body.commit && r.body.commit.sha;
+      });
+  }
+
+  // Изменения идут по очереди, чтобы два коммита не столкнулись.
+  var queue = Promise.resolve();
+  function enqueue(mutate, message) {
+    if (!state.token) {
+      return Promise.reject(new Error('Сначала подключите GitHub в разделе «Хранение».'));
+    }
+    var run = queue.then(function () {
+      setSync('busy', 'Сохранение…');
+      return commit(mutate, message);
+    }).then(function (sha) {
+      setSync('ok', 'Сохранено' + (sha ? ' · ' + sha.slice(0, 7) : ''));
+      render();
+    }, function (err) {
+      setSync('error', 'Не сохранено');
+      throw err;
+    });
+    queue = run.catch(function () {});
+    return run;
+  }
+
+  // ---------- переключатели ----------
   detailsToggle.addEventListener('click', function () {
     var willShow = dailyBlocksEl.hidden;
     dailyBlocksEl.hidden = !willShow;
@@ -421,13 +634,10 @@
       selected = selected === btn.getAttribute('data-value') ? null : btn.getAttribute('data-value');
       update();
     });
-    return {
-      get: function () { return selected; },
-      set: function (v) { selected = v; update(); }
-    };
+    return { get: function () { return selected; }, set: function (v) { selected = v; update(); } };
   }
-  var periodToggle = makeToggle(document.getElementById('period-toggle'));
-  var armToggle = makeToggle(document.getElementById('arm-toggle'));
+  var periodToggle = makeToggle($('period-toggle'));
+  var armToggle = makeToggle($('arm-toggle'));
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   var now = new Date();
@@ -435,12 +645,9 @@
   fTime.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
   periodToggle.set(now.getHours() < 15 ? 'morning' : 'evening');
 
-  function periodLabel(period) {
-    return period === 'morning' ? 'Утро' : period === 'evening' ? 'Вечер' : '—';
-  }
-  function armLabel(arm) {
-    return arm === 'left' ? 'Левая' : arm === 'right' ? 'Правая' : '—';
-  }
+  // ---------- форматирование ----------
+  function periodLabel(period) { return period === 'morning' ? 'Утро' : period === 'evening' ? 'Вечер' : '—'; }
+  function armLabel(arm) { return arm === 'left' ? 'Левая' : arm === 'right' ? 'Правая' : '—'; }
 
   function categorize(sys, dia) {
     if (sys > 180 || dia > 120) return { key: 'crisis', label: 'Криз' };
@@ -468,8 +675,7 @@
   }
 
   function buildDayGroups(readings) {
-    var map = {};
-    var dates = [];
+    var map = {}, dates = [];
     readings.forEach(function (r) {
       if (!map[r.date]) { map[r.date] = []; dates.push(r.date); }
       map[r.date].push(r);
@@ -483,19 +689,13 @@
         var c = categorize(r.systolic, r.diastolic);
         if (SEVERITY[c.key] > SEVERITY[worst.key]) worst = c;
       });
-      return {
-        date: date,
-        readings: list,
-        avgSys: Math.round(sumSys / list.length),
-        avgDia: Math.round(sumDia / list.length),
-        worst: worst
-      };
+      return { date: date, readings: list, avgSys: Math.round(sumSys / list.length), avgDia: Math.round(sumDia / list.length), worst: worst };
     });
   }
 
   function escapeHtml(s) {
     var div = document.createElement('div');
-    div.textContent = s;
+    div.textContent = s == null ? '' : String(s);
     return div.innerHTML;
   }
 
@@ -527,7 +727,11 @@
   }
 
   function render() {
-    var readings = loadReadings();
+    var readings = state.readings;
+    refreshLocalBanner();
+    tokenBanner.hidden = !!state.token || !state.loaded;
+    ghConnected.hidden = !state.token;
+    ghSetup.hidden = !!state.token;
 
     if (!readings.length) {
       summaryEl.innerHTML = '<p class="summary-empty">Пока нет ни одного измерения.</p>';
@@ -575,46 +779,90 @@
         '<td class="nums">' + (r.pulse || '—') + '</td>' +
         '<td><span class="badge ' + c.key + '">' + c.label + '</span></td>' +
         '<td class="note">' + (r.note ? escapeHtml(r.note) : '') + '</td>' +
-        '<td><button class="del-btn" data-id="' + r.id + '" title="Удалить">×</button></td>' +
+        '<td><button class="del-btn" data-id="' + escapeHtml(r.id) + '" title="Удалить">×</button></td>' +
         '</tr>';
     }).join('');
   }
 
-  function loadReadings() {
+  function sortReadings(list) {
+    return list.slice().sort(function (a, b) { return (b.dateTime || '').localeCompare(a.dateTime || ''); });
+  }
+  function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // ---------- старые записи из localStorage ----------
+  function loadLegacy() {
     var raw;
-    try {
-      raw = localStorage.getItem(STORAGE_KEY);
-    } catch (e) {
-      return [];
-    }
+    try { raw = localStorage.getItem(LEGACY_KEY); } catch (e) { return []; }
     if (!raw) return [];
-    try {
-      var list = JSON.parse(raw);
-      if (!Array.isArray(list)) return [];
-      return list.slice().sort(function (a, b) {
-        return (b.dateTime || '').localeCompare(a.dateTime || '');
+    try { var list = JSON.parse(raw); return Array.isArray(list) ? list : []; } catch (e) { return []; }
+  }
+  function clearLegacy() { try { localStorage.removeItem(LEGACY_KEY); } catch (e) {} }
+  function refreshLocalBanner() {
+    var legacy = loadLegacy();
+    localBanner.hidden = !legacy.length || !state.loaded;
+    localCount.textContent = legacy.length;
+  }
+
+  function normalizeImported(list, known) {
+    var out = [];
+    list.forEach(function (r) {
+      if (!r || typeof r.systolic !== 'number' || typeof r.diastolic !== 'number' || !r.date) return;
+      if (r.systolic < 40 || r.systolic > 300 || r.diastolic < 20 || r.diastolic > 200) return;
+      var date = String(r.date).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      var time = typeof r.time === 'string' && /^\d{2}:\d{2}$/.test(r.time) ? r.time : null;
+      var id = r.id && !known[r.id] ? String(r.id) : makeId();
+      known[id] = true;
+      out.push({
+        id: id,
+        systolic: r.systolic,
+        diastolic: r.diastolic,
+        pulse: typeof r.pulse === 'number' && r.pulse >= 20 && r.pulse <= 250 ? r.pulse : null,
+        date: date,
+        time: time,
+        period: r.period === 'morning' || r.period === 'evening' ? r.period : null,
+        arm: r.arm === 'left' || r.arm === 'right' ? r.arm : null,
+        dateTime: typeof r.dateTime === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(r.dateTime) ? r.dateTime.slice(0, 16) : date + 'T' + (time || '12:00'),
+        note: String(r.note || '').slice(0, 80)
       });
-    } catch (e) {
-      return [];
-    }
+    });
+    return out;
   }
 
-  function saveReadings(list) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      return true;
-    } catch (e) {
-      return false;
-    }
+  function appendMany(incoming, message) {
+    var added = 0;
+    return enqueue(function (list) {
+      var known = {};
+      list.forEach(function (r) { known[r.id] = true; });
+      var clean = normalizeImported(incoming, known);
+      added = clean.length;
+      return list.concat(clean);
+    }, message).then(function () { return added; });
   }
 
-  function makeId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
+  localImportBtn.addEventListener('click', function () {
+    var legacy = loadLegacy();
+    localImportBtn.disabled = true;
+    appendMany(legacy, 'Перенос ' + legacy.length + ' записей из браузера')
+      .then(function (added) {
+        clearLegacy();
+        dataStatus.textContent = 'Перенесено записей: ' + added + '.';
+        render();
+      })
+      .catch(function (err) { showGlobalError('Не удалось перенести записи. ' + err.message); })
+      .then(function () { localImportBtn.disabled = false; });
+  });
+  localDiscardBtn.addEventListener('click', function () {
+    if (!confirm('Удалить старые записи из этого браузера без переноса?')) return;
+    clearLegacy();
+    refreshLocalBanner();
+  });
 
+  // ---------- добавление и удаление ----------
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    formError.hidden = true;
+    showMsg(formError, '');
+    showGlobalError('');
 
     var sys = parseInt(fSys.value, 10);
     var dia = parseInt(fDia.value, 10);
@@ -622,52 +870,50 @@
     var note = fNote.value.trim();
 
     if (!sys || !dia || sys < 40 || sys > 300 || dia < 20 || dia > 200) {
-      formError.textContent = 'Проверьте значения давления.';
-      formError.hidden = false;
+      showMsg(formError, 'Проверьте значения давления.');
       return;
     }
+    if (pulse != null && (pulse < 20 || pulse > 250)) {
+      showMsg(formError, 'Проверьте значение пульса.');
+      return;
+    }
+    if (!fDate.value) { showMsg(formError, 'Укажите дату.'); return; }
 
     var time = fTime.value || null;
     var period = periodToggle.get();
     var arm = armToggle.get();
     var sortTime = time || (period === 'morning' ? '06:00' : period === 'evening' ? '18:00' : '12:00');
-    var dateTime = fDate.value + 'T' + sortTime;
+    var reading = {
+      id: makeId(), systolic: sys, diastolic: dia, pulse: pulse, date: fDate.value, time: time,
+      period: period, arm: arm, dateTime: fDate.value + 'T' + sortTime, note: note
+    };
 
-    var list = loadReadings();
-    list.push({
-      id: makeId(),
-      systolic: sys,
-      diastolic: dia,
-      pulse: pulse,
-      date: fDate.value,
-      time: time,
-      period: period,
-      arm: arm,
-      dateTime: dateTime,
-      note: note
-    });
-    saveReadings(list);
-
-    fSys.value = '';
-    fDia.value = '';
-    fPulse.value = '';
-    fNote.value = '';
-    fSys.focus();
-    render();
+    addBtn.disabled = true;
+    enqueue(function (list) { list.push(reading); return list; },
+            'Измерение ' + formatDate(reading.date) + ' ' + sys + '/' + dia + (pulse ? ' пульс ' + pulse : ''))
+      .then(function () {
+        fSys.value = ''; fDia.value = ''; fPulse.value = ''; fNote.value = '';
+        fSys.focus();
+      })
+      .catch(function (err) { showMsg(formError, 'Не удалось сохранить. ' + err.message); })
+      .then(function () { addBtn.disabled = false; });
   });
 
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest('.del-btn');
     if (!btn) return;
     var id = btn.getAttribute('data-id');
-    var list = loadReadings().filter(function (r) { return r.id !== id; });
-    saveReadings(list);
-    render();
+    var r = state.readings.filter(function (x) { return x.id === id; })[0];
+    btn.disabled = true;
+    showGlobalError('');
+    enqueue(function (list) { return list.filter(function (x) { return x.id !== id; }); },
+            'Удалено измерение' + (r ? ' ' + formatDate(r.date) + ' ' + r.systolic + '/' + r.diastolic : ''))
+      .catch(function (err) { btn.disabled = false; showGlobalError('Не удалось удалить запись. ' + err.message); });
   });
 
+  // ---------- экспорт / импорт ----------
   exportBtn.addEventListener('click', function () {
-    var list = loadReadings();
-    var blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
+    var blob = new Blob([JSON.stringify(state.readings, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     var stamp = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
@@ -679,9 +925,7 @@
     URL.revokeObjectURL(url);
   });
 
-  importBtn.addEventListener('click', function () {
-    importFile.click();
-  });
+  importBtn.addEventListener('click', function () { importFile.click(); });
 
   importFile.addEventListener('change', function () {
     var file = importFile.files[0];
@@ -689,48 +933,94 @@
     var reader = new FileReader();
     reader.onload = function () {
       var incoming;
-      try {
-        incoming = JSON.parse(reader.result);
-      } catch (e) {
-        dataStatus.textContent = 'Файл не похож на экспорт этого дневника.';
-        return;
-      }
+      try { incoming = JSON.parse(reader.result); } catch (e) { incoming = null; }
+      importFile.value = '';
       if (!Array.isArray(incoming)) {
         dataStatus.textContent = 'Файл не похож на экспорт этого дневника.';
         return;
       }
-      var current = loadReadings();
-      var known = {};
-      current.forEach(function (r) { known[r.id] = true; });
-      var added = 0;
-      incoming.forEach(function (r) {
-        if (r && typeof r.systolic === 'number' && typeof r.diastolic === 'number' && r.date) {
-          var id = r.id && !known[r.id] ? r.id : makeId();
-          known[id] = true;
-          current.push({
-            id: id,
-            systolic: r.systolic,
-            diastolic: r.diastolic,
-            pulse: r.pulse || null,
-            date: r.date,
-            time: r.time || null,
-            period: r.period || null,
-            arm: r.arm || null,
-            dateTime: r.dateTime || (r.date + 'T12:00'),
-            note: r.note || ''
-          });
-          added++;
-        }
-      });
-      saveReadings(current);
-      dataStatus.textContent = 'Импортировано записей: ' + added + '.';
-      importFile.value = '';
-      render();
+      importBtn.disabled = true;
+      appendMany(incoming, 'Импорт записей из файла ' + file.name)
+        .then(function (added) { dataStatus.textContent = 'Импортировано записей: ' + added + '.'; })
+        .catch(function (err) { dataStatus.textContent = 'Не удалось импортировать. ' + err.message; })
+        .then(function () { importBtn.disabled = false; });
     };
     reader.readAsText(file);
   });
 
-  render();
+  // ---------- токен GitHub ----------
+  tokenForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    showMsg(tokenError, '');
+    var token = fToken.value.trim();
+    if (!token) return;
+    tokenBtn.disabled = true;
+    // Проверяем токен: кто это и есть ли доступ к репозиторию на запись.
+    var probe = { headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token } };
+    ghFetch(API + '/user', probe)
+      .then(function (r) {
+        if (r.status === 401) throw new Error('GitHub не принял токен. Проверьте, что он скопирован целиком.');
+        var login = r.ok && r.body && r.body.login ? r.body.login : '';
+        return ghFetch(API + '/repos/' + encodeURIComponent(repo.owner) + '/' + encodeURIComponent(repo.repo), probe)
+          .then(function (rr) {
+            if (rr.status === 404) throw new Error('Токен не имеет доступа к репозиторию ' + repo.owner + '/' + repo.repo + '. Выберите его в Repository access.');
+            if (!rr.ok) throw new Error(describeHttpError(rr.status, rr.body));
+            var perms = rr.body.permissions || {};
+            if (perms.push === false) throw new Error('Токен даёт только чтение. Нужно разрешение Contents: Read and write.');
+            return login;
+          });
+      })
+      .then(function (login) {
+        setToken(token);
+        fToken.value = '';
+        ghUser.textContent = login ? ' как @' + login : '';
+        return reload();
+      })
+      .catch(function (err) { showMsg(tokenError, err.message); })
+      .then(function () { tokenBtn.disabled = false; });
+  });
+
+  ghDisconnect.addEventListener('click', function () {
+    setToken('');
+    ghUser.textContent = '';
+    render();
+    setSync('busy', 'Только чтение');
+  });
+
+  // ---------- загрузка ----------
+  function fetchLogin() {
+    if (!state.token) return;
+    ghFetch(API + '/user', { headers: ghHeaders() })
+      .then(function (r) { if (r.ok && r.body && r.body.login) ghUser.textContent = ' как @' + r.body.login; })
+      .catch(function () {});
+  }
+  function reload() {
+    setSync('busy', 'Загрузка…');
+    showGlobalError('');
+    if (!ghUser.textContent) fetchLogin();
+    return fetchRemote()
+      .then(function (remote) {
+        state.readings = sortReadings(remote.list);
+        state.sha = remote.sha;
+        state.loaded = true;
+        setSync(state.token ? 'ok' : 'busy', state.token ? 'Синхронизировано' : 'Только чтение');
+        render();
+      })
+      .catch(function (err) {
+        state.loaded = true;
+        setSync('error', 'Нет связи');
+        showGlobalError('Не удалось загрузить записи с GitHub. ' + err.message);
+        render();
+      });
+  }
+
+  if (!repo.owner || !repo.repo) {
+    setSync('error', 'Не настроено');
+    showGlobalError('Не указан репозиторий: заполните owner и repo в config.js.');
+    render();
+  } else {
+    reload();
+  }
 })();
 </script>
 </body>
