@@ -1,10 +1,9 @@
-// Настройки подключения к Supabase.
-// Откройте supabase.com → ваш проект → Project Settings → API и скопируйте:
-//   Project URL        → supabaseUrl
-//   anon public key    → supabaseAnonKey
-// Эти значения публичные, их можно хранить в репозитории: доступ к данным
-// ограничивают правила Row Level Security из supabase/schema.sql.
+// Где хранятся записи дневника: файл в этом же репозитории на GitHub.
+// Если сайт открыт с GitHub Pages (логин.github.io/репозиторий), владелец и
+// репозиторий определяются автоматически, эти значения — запасные.
 window.BP_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: ''
+  owner: 'wiliel-maker',        // логин на GitHub
+  repo: 'bp-diary',             // имя репозитория
+  branch: 'main',               // ветка, в которую пишутся записи
+  path: 'data/readings.json'    // файл с записями
 };

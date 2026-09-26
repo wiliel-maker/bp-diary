@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Дневник давления</title>
-<meta name="description" content="Трекер артериального давления и пульса с аккаунтами, облачным хранением и настройками приватности.">
+<meta name="description" content="Личный трекер артериального давления и пульса. Записи сохраняются в репозиторий на GitHub.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
   :root {
@@ -90,7 +90,6 @@
     flex-direction: column;
     gap: 28px;
   }
-  .view { display: flex; flex-direction: column; gap: 28px; }
   h1, h2 {
     font-family: "Fraunces", Georgia, serif;
     text-wrap: balance;
@@ -123,21 +122,26 @@
     margin-bottom: 14px;
   }
   a { color: var(--accent); }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 12px; }
 
-  /* top bar */
-  .topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
-  .nav { display: flex; flex-wrap: wrap; gap: 6px; }
-  .nav a {
-    text-decoration: none;
-    font-size: 13px;
+  /* sync status */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+  .sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--muted);
     padding: 6px 10px;
-    border-radius: 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    white-space: nowrap;
   }
-  .nav a.active, .nav a:hover { background: var(--surface-2); color: var(--accent); }
-  .user-chip { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
-  .user-chip strong { color: var(--ink); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .sync.ok { background: var(--good-bg); color: var(--good-ink); }
+  .sync.busy { background: var(--elevated-bg); color: var(--elevated-ink); }
+  .sync.error { background: var(--stage2-bg); color: var(--stage2-ink); }
 
   /* banners */
   .banner {
@@ -152,10 +156,8 @@
     background: var(--elevated-bg);
     color: var(--elevated-ink);
   }
-  .banner.info { background: var(--surface-2); color: var(--ink); }
   .banner.error { background: var(--stage2-bg); color: var(--stage2-ink); }
   .banner p { margin: 0; flex: 1 1 260px; }
-  .banner code { font-family: "IBM Plex Mono", monospace; font-size: 12px; }
 
   /* summary */
   .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 32px; }
@@ -180,15 +182,12 @@
   .badge.stage1 { background: var(--stage1-bg); color: var(--stage1-ink); }
   .badge.stage2 { background: var(--stage2-bg); color: var(--stage2-ink); }
   .badge.crisis { background: var(--crisis-bg); color: var(--crisis-ink); }
-  .badge.open { background: var(--good-bg); color: var(--good-ink); }
-  .badge.closed { background: var(--surface-2); color: var(--muted); }
 
-  /* forms */
+  /* form */
   form { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: end; }
-  form.stack { flex-direction: column; align-items: stretch; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
-  .field input, .field select {
+  .field input {
     font: inherit;
     font-family: "IBM Plex Mono", monospace;
     background: var(--surface-2);
@@ -198,14 +197,14 @@
     color: var(--ink);
     width: 100%;
   }
-  .field.note input, .field.text input { font-family: "IBM Plex Sans", sans-serif; }
+  .field.note input { font-family: "IBM Plex Sans", sans-serif; }
   .field.sys input, .field.dia input, .field.pulse input { width: 84px; }
   .field.date input { width: 150px; }
   .field.time input { width: 110px; }
   .field.note { flex: 1 1 160px; }
+  .field.token { flex: 1 1 260px; }
   .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .field .hint { font-size: 12px; color: var(--muted); }
-  .primary-btn, button[type="submit"] {
+  button[type="submit"] {
     font: inherit;
     font-weight: 600;
     background: var(--accent);
@@ -216,8 +215,8 @@
     cursor: pointer;
     height: 38px;
   }
-  .primary-btn:hover, button[type="submit"]:hover { filter: brightness(1.05); }
-  .primary-btn[disabled], button[type="submit"][disabled] { opacity: 0.6; cursor: wait; }
+  button[type="submit"]:hover { filter: brightness(1.05); }
+  button[disabled] { opacity: 0.6; cursor: wait; }
   .form-error { color: var(--stage2-ink); font-size: 13px; margin: 0; flex-basis: 100%; }
   .form-ok { color: var(--good-ink); font-size: 13px; margin: 0; flex-basis: 100%; }
   .segmented { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: 38px; }
@@ -233,28 +232,6 @@
   }
   .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
   .seg-btn.active { background: var(--accent); color: var(--accent-ink); }
-  .check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; cursor: pointer; }
-  .check input { margin-top: 3px; accent-color: var(--accent); }
-  .check .desc { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .form-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-
-  /* auth */
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .tab {
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    color: var(--muted);
-    padding: 8px 12px;
-    cursor: pointer;
-  }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .auth-card { max-width: 440px; }
-  .auth-card .field { width: 100%; }
 
   /* history */
   .history-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
@@ -293,7 +270,6 @@
     cursor: pointer;
   }
   .ghost-btn:hover { background: var(--surface-2); }
-  .ghost-btn[disabled] { opacity: 0.6; cursor: wait; }
 
   /* daily blocks */
   .daily-blocks { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
@@ -318,37 +294,13 @@
   .legend .swatch.crisis { background: var(--crisis-ink); }
   .legend .range { color: var(--muted); font-family: "IBM Plex Mono", monospace; margin-left: auto; }
 
-  /* data management */
-  .data-section p, .settings-section p { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 60ch; }
+  /* data & github */
+  .data-section p, .gh-section p { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 60ch; }
+  .gh-section ol { color: var(--muted); font-size: 13px; margin: 0 0 14px; padding-left: 20px; max-width: 60ch; }
+  .gh-section li { margin-bottom: 4px; }
   .data-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .data-status { font-size: 13px; color: var(--muted); }
-
-  /* diary owner header (viewing another user) */
-  .owner-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-  .owner-head h2 { margin: 0; }
-  .owner-head .back { margin-left: auto; font-size: 13px; }
-  .owner-name { font-family: "IBM Plex Mono", monospace; color: var(--muted); font-size: 13px; }
-
-  /* users list */
-  .users-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-  .users-toolbar input {
-    font: inherit;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 10px;
-    color: var(--ink);
-    flex: 1 1 200px;
-  }
-  .users-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .users-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 4px; border-bottom: 1px solid var(--border); }
-  .users-list li:last-child { border-bottom: none; }
-  .users-list .name { font-weight: 600; text-decoration: none; color: var(--ink); }
-  .users-list .name.disabled { color: var(--muted); cursor: default; font-weight: 500; }
-  .users-list .login { font-family: "IBM Plex Mono", monospace; color: var(--muted); font-size: 13px; }
-  .users-list .meta { color: var(--muted); font-size: 12px; margin-left: auto; font-family: "IBM Plex Mono", monospace; }
-  .users-empty { color: var(--muted); font-size: 14px; margin: 0; }
-
+  .gh-connected { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; }
 </style>
 </head>
@@ -361,392 +313,308 @@
         <p class="eyebrow">Домашний мониторинг</p>
         <h1>Дневник давления</h1>
       </div>
-      <div class="user-chip" id="user-chip" hidden>
-        <strong id="chip-name"></strong>
-        <button type="button" class="ghost-btn" id="logout-btn">Выйти</button>
-      </div>
+      <span class="sync" id="sync">Загрузка…</span>
     </div>
-    <p class="subtitle" id="subtitle">Записывайте систолическое и диастолическое давление и пульс. Каждое измерение сразу сохраняется в вашем аккаунте и доступно с любого устройства.</p>
-    <nav class="nav" id="nav" hidden style="margin-top:14px">
-      <a href="#/" data-route="diary">Мой дневник</a>
-      <a href="#/users" data-route="users">Пользователи</a>
-      <a href="#/settings" data-route="settings">Настройки</a>
-    </nav>
+    <p class="subtitle">Записывайте систолическое и диастолическое давление и пульс. Каждое измерение сохраняется в репозиторий на GitHub и доступно с любого устройства.</p>
   </header>
-
-  <div class="banner error" id="setup-banner" hidden>
-    <p>Сайт ещё не подключён к базе данных. Заполните <code>config.js</code> значениями из Supabase (Project URL и anon key) по инструкции в <code>README.md</code>.</p>
-  </div>
 
   <div class="banner error" id="global-error" hidden><p id="global-error-text"></p></div>
 
-  <!-- ============ АВТОРИЗАЦИЯ ============ -->
-  <div class="view" id="view-auth" hidden>
-    <section class="auth-card">
-      <div class="tabs" role="tablist">
-        <button type="button" class="tab active" id="tab-login" role="tab">Вход</button>
-        <button type="button" class="tab" id="tab-register" role="tab">Регистрация</button>
-      </div>
-
-      <form id="login-form" class="stack" autocomplete="on">
-        <div class="field text">
-          <label for="l-email">Email</label>
-          <input id="l-email" type="email" autocomplete="username" required>
-        </div>
-        <div class="field text">
-          <label for="l-pass">Пароль</label>
-          <input id="l-pass" type="password" autocomplete="current-password" required>
-        </div>
-        <p class="form-error" id="login-error" hidden></p>
-        <p class="form-ok" id="login-ok" hidden></p>
-        <div class="form-row">
-          <button type="submit" id="login-btn">Войти</button>
-          <button type="button" class="ghost-btn" id="reset-btn">Забыли пароль?</button>
-        </div>
-      </form>
-
-      <form id="register-form" class="stack" autocomplete="on" hidden>
-        <div class="field text">
-          <label for="r-username">Логин</label>
-          <input id="r-username" type="text" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" placeholder="например, ivan_p">
-          <span class="hint">3–20 символов: латинские буквы, цифры, подчёркивание. По нему вас найдут другие пользователи.</span>
-        </div>
-        <div class="field text">
-          <label for="r-name">Отображаемое имя (необязательно)</label>
-          <input id="r-name" type="text" maxlength="40" placeholder="Иван Петров">
-        </div>
-        <div class="field text">
-          <label for="r-email">Email</label>
-          <input id="r-email" type="email" autocomplete="email" required>
-        </div>
-        <div class="field text">
-          <label for="r-pass">Пароль</label>
-          <input id="r-pass" type="password" autocomplete="new-password" required minlength="6">
-          <span class="hint">Не короче 6 символов.</span>
-        </div>
-        <p class="form-error" id="register-error" hidden></p>
-        <p class="form-ok" id="register-ok" hidden></p>
-        <div class="form-row">
-          <button type="submit" id="register-btn">Создать аккаунт</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="legend">
-      <h2>Что умеет дневник</h2>
-      <ul>
-        <li><span class="swatch normal"></span>Измерения сохраняются в аккаунте, а не в браузере: история доступна с телефона и компьютера.</li>
-        <li><span class="swatch elevated"></span>Дневник по умолчанию закрыт. В настройках его можно открыть для других пользователей.</li>
-        <li><span class="swatch stage1"></span>Список пользователей показывает, чьи дневники открыты для просмотра.</li>
-      </ul>
-    </section>
+  <div class="banner" id="token-banner" hidden>
+    <p>Записи с GitHub загружены, но без токена сайт не сможет их сохранять. Подключите GitHub в разделе «Хранение» внизу страницы.</p>
+    <a class="ghost-btn" href="#github">Подключить</a>
   </div>
 
-  <!-- ============ ДНЕВНИК ============ -->
-  <div class="view" id="view-diary" hidden>
-    <section class="owner-head" id="owner-head" hidden>
-      <h2 id="owner-title"></h2>
-      <span class="owner-name" id="owner-login"></span>
-      <span class="badge closed" id="owner-badge"></span>
-      <a class="back" href="#/users">← К списку пользователей</a>
-    </section>
+  <div class="banner" id="local-banner" hidden>
+    <p>В этом браузере остались записи из старой версии дневника: <strong id="local-count"></strong>. Перенести их в репозиторий?</p>
+    <button type="button" class="ghost-btn" id="local-import-btn">Перенести</button>
+    <button type="button" class="ghost-btn" id="local-discard-btn">Удалить</button>
+  </div>
 
-    <div class="banner info" id="closed-banner" hidden>
-      <p>Этот пользователь закрыл свой дневник. Записи видны только владельцу.</p>
+  <section class="summary" id="summary">
+    <p class="summary-empty">Пока нет ни одного измерения.</p>
+  </section>
+
+  <section class="add-card">
+    <h2>Новое измерение</h2>
+    <form id="add-form">
+      <div class="field sys">
+        <label for="f-sys">Систолическое</label>
+        <input id="f-sys" type="number" inputmode="numeric" placeholder="120" min="40" max="300" required>
+      </div>
+      <div class="field dia">
+        <label for="f-dia">Диастолическое</label>
+        <input id="f-dia" type="number" inputmode="numeric" placeholder="80" min="20" max="200" required>
+      </div>
+      <div class="field pulse">
+        <label for="f-pulse">Пульс</label>
+        <input id="f-pulse" type="number" inputmode="numeric" placeholder="70" min="20" max="250">
+      </div>
+      <div class="field date">
+        <label for="f-date">Дата</label>
+        <input id="f-date" type="date" required>
+      </div>
+      <div class="field period">
+        <label id="period-label">Период</label>
+        <div class="segmented" id="period-toggle" role="group" aria-labelledby="period-label">
+          <button type="button" class="seg-btn" data-value="morning">Утро</button>
+          <button type="button" class="seg-btn" data-value="evening">Вечер</button>
+        </div>
+      </div>
+      <div class="field arm">
+        <label id="arm-label">Рука</label>
+        <div class="segmented" id="arm-toggle" role="group" aria-labelledby="arm-label">
+          <button type="button" class="seg-btn" data-value="left">Левая</button>
+          <button type="button" class="seg-btn" data-value="right">Правая</button>
+        </div>
+      </div>
+      <div class="field time">
+        <label for="f-time">Время (необязательно)</label>
+        <input id="f-time" type="time">
+      </div>
+      <div class="field note">
+        <label for="f-note">Заметка</label>
+        <input id="f-note" type="text" placeholder="например, после тренировки" maxlength="80">
+      </div>
+      <button type="submit" id="add-btn">Добавить</button>
+      <p class="form-error" id="form-error" hidden></p>
+    </form>
+  </section>
+
+  <section class="history">
+    <div class="history-head">
+      <h2>История</h2>
+      <div class="history-head-right">
+        <span id="count"></span>
+        <button type="button" id="details-toggle" class="ghost-btn">Подробнее</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="table" hidden>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Период</th>
+            <th>Рука</th>
+            <th>Время</th>
+            <th>Сист.</th>
+            <th>Диаст.</th>
+            <th>Пульс</th>
+            <th>Категория</th>
+            <th>Заметка</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="daily-blocks" id="daily-blocks" hidden></div>
+    <p id="empty-state">Записей пока нет — добавьте первое измерение выше.</p>
+  </section>
+
+  <section class="legend">
+    <h2>Категории давления</h2>
+    <ul>
+      <li><span class="swatch normal"></span>Норма<span class="range">&lt;120 / &lt;80</span></li>
+      <li><span class="swatch elevated"></span>Повышенное<span class="range">120–129 / &lt;80</span></li>
+      <li><span class="swatch stage1"></span>Гипертония, 1 стадия<span class="range">130–139 / 80–89</span></li>
+      <li><span class="swatch stage2"></span>Гипертония, 2 стадия<span class="range">≥140 / ≥90</span></li>
+      <li><span class="swatch crisis"></span>Гипертонический криз<span class="range">&gt;180 / &gt;120</span></li>
+    </ul>
+  </section>
+
+  <section class="gh-section" id="github">
+    <h2>Хранение</h2>
+    <p>Записи лежат в файле <code id="gh-path"></code> в репозитории <code id="gh-repo"></code>. Чтобы сайт мог их сохранять, нужен токен GitHub. Он хранится только в этом браузере и никуда, кроме api.github.com, не отправляется.</p>
+
+    <div class="gh-connected" id="gh-connected" hidden>
+      <span>GitHub подключён<span id="gh-user"></span>.</span>
+      <button type="button" class="ghost-btn" id="gh-disconnect">Отключить</button>
     </div>
 
-    <div class="banner" id="local-banner" hidden>
-      <p>В этом браузере остались записи из старой версии дневника: <strong id="local-count"></strong>. Перенести их в аккаунт?</p>
-      <button type="button" class="ghost-btn" id="local-import-btn">Перенести</button>
-      <button type="button" class="ghost-btn" id="local-discard-btn">Удалить</button>
+    <div id="gh-setup">
+      <ol>
+        <li>Откройте <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+        <li>Repository access: <strong>Only select repositories</strong> → выберите этот репозиторий.</li>
+        <li>Permissions → Repository permissions → <strong>Contents: Read and write</strong>. Больше ничего не нужно.</li>
+        <li>Выберите срок действия подольше, создайте токен и вставьте его сюда.</li>
+      </ol>
+      <form id="token-form">
+        <div class="field token">
+          <label for="f-token">Токен</label>
+          <input id="f-token" type="password" autocomplete="off" placeholder="github_pat_…" required>
+        </div>
+        <button type="submit" id="token-btn">Подключить</button>
+        <p class="form-error" id="token-error" hidden></p>
+      </form>
     </div>
+  </section>
 
-    <section class="summary" id="summary">
-      <p class="summary-empty">Пока нет ни одного измерения.</p>
-    </section>
+  <section class="data-section">
+    <h2>Данные</h2>
+    <p>Экспорт даёт резервную копию истории в файле. Импорт добавляет записи из такого файла в дневник.</p>
+    <div class="data-actions">
+      <button type="button" class="ghost-btn" id="export-btn">Экспортировать в файл</button>
+      <button type="button" class="ghost-btn" id="import-btn">Импортировать из файла</button>
+      <input type="file" id="import-file" accept="application/json" hidden>
+      <span class="data-status" id="data-status"></span>
+    </div>
+  </section>
 
-    <section class="add-card" id="add-card">
-      <h2>Новое измерение</h2>
-      <form id="add-form">
-        <div class="field sys">
-          <label for="f-sys">Систолическое</label>
-          <input id="f-sys" type="number" inputmode="numeric" placeholder="120" min="40" max="300" required>
-        </div>
-        <div class="field dia">
-          <label for="f-dia">Диастолическое</label>
-          <input id="f-dia" type="number" inputmode="numeric" placeholder="80" min="20" max="200" required>
-        </div>
-        <div class="field pulse">
-          <label for="f-pulse">Пульс</label>
-          <input id="f-pulse" type="number" inputmode="numeric" placeholder="70" min="20" max="250">
-        </div>
-        <div class="field date">
-          <label for="f-date">Дата</label>
-          <input id="f-date" type="date" required>
-        </div>
-        <div class="field period">
-          <label id="period-label">Период</label>
-          <div class="segmented" id="period-toggle" role="group" aria-labelledby="period-label">
-            <button type="button" class="seg-btn" data-value="morning">Утро</button>
-            <button type="button" class="seg-btn" data-value="evening">Вечер</button>
-          </div>
-        </div>
-        <div class="field arm">
-          <label id="arm-label">Рука</label>
-          <div class="segmented" id="arm-toggle" role="group" aria-labelledby="arm-label">
-            <button type="button" class="seg-btn" data-value="left">Левая</button>
-            <button type="button" class="seg-btn" data-value="right">Правая</button>
-          </div>
-        </div>
-        <div class="field time">
-          <label for="f-time">Время (необязательно)</label>
-          <input id="f-time" type="time">
-        </div>
-        <div class="field note">
-          <label for="f-note">Заметка</label>
-          <input id="f-note" type="text" placeholder="например, после тренировки" maxlength="80">
-        </div>
-        <button type="submit" id="add-btn">Добавить</button>
-        <p class="form-error" id="form-error" hidden></p>
-      </form>
-    </section>
-
-    <section class="history" id="history-section">
-      <div class="history-head">
-        <h2>История</h2>
-        <div class="history-head-right">
-          <span id="count"></span>
-          <button type="button" id="details-toggle" class="ghost-btn">Подробнее</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="table" hidden>
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Период</th>
-              <th>Рука</th>
-              <th>Время</th>
-              <th>Сист.</th>
-              <th>Диаст.</th>
-              <th>Пульс</th>
-              <th>Категория</th>
-              <th>Заметка</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <div class="daily-blocks" id="daily-blocks" hidden></div>
-      <p id="empty-state">Записей пока нет — добавьте первое измерение выше.</p>
-    </section>
-
-    <section class="legend">
-      <h2>Категории давления</h2>
-      <ul>
-        <li><span class="swatch normal"></span>Норма<span class="range">&lt;120 / &lt;80</span></li>
-        <li><span class="swatch elevated"></span>Повышенное<span class="range">120–129 / &lt;80</span></li>
-        <li><span class="swatch stage1"></span>Гипертония, 1 стадия<span class="range">130–139 / 80–89</span></li>
-        <li><span class="swatch stage2"></span>Гипертония, 2 стадия<span class="range">≥140 / ≥90</span></li>
-        <li><span class="swatch crisis"></span>Гипертонический криз<span class="range">&gt;180 / &gt;120</span></li>
-      </ul>
-    </section>
-
-    <section class="data-section" id="data-section">
-      <h2>Данные</h2>
-      <p>Записи хранятся в вашем аккаунте. Экспорт даёт резервную копию в файле, импорт добавляет записи из такого файла в аккаунт.</p>
-      <div class="data-actions">
-        <button type="button" class="ghost-btn" id="export-btn">Экспортировать в файл</button>
-        <button type="button" class="ghost-btn" id="import-btn">Импортировать из файла</button>
-        <input type="file" id="import-file" accept="application/json" hidden>
-        <span class="data-status" id="data-status"></span>
-      </div>
-    </section>
-  </div>
-
-  <!-- ============ ПОЛЬЗОВАТЕЛИ ============ -->
-  <div class="view" id="view-users" hidden>
-    <section>
-      <h2>Пользователи</h2>
-      <div class="users-toolbar">
-        <input type="search" id="users-search" placeholder="Поиск по логину или имени" autocomplete="off">
-        <span class="data-status" id="users-status"></span>
-      </div>
-      <ul class="users-list" id="users-list"></ul>
-      <p class="users-empty" id="users-empty" hidden>Никого не найдено.</p>
-    </section>
-  </div>
-
-  <!-- ============ НАСТРОЙКИ ============ -->
-  <div class="view" id="view-settings" hidden>
-    <section class="settings-section">
-      <h2>Профиль и приватность</h2>
-      <p>Логин: <strong id="s-username" style="font-family:'IBM Plex Mono',monospace"></strong>. Email: <span id="s-email"></span>.</p>
-      <form id="settings-form" class="stack">
-        <div class="field text">
-          <label for="s-name">Отображаемое имя</label>
-          <input id="s-name" type="text" maxlength="40" placeholder="Как вас показывать другим">
-        </div>
-        <label class="check">
-          <input type="checkbox" id="s-public">
-          <span>Открытый дневник<span class="desc">Другие пользователи смогут смотреть ваши измерения. Если выключено, они увидят только ваш логин и имя.</span></span>
-        </label>
-        <label class="check">
-          <input type="checkbox" id="s-notes">
-          <span>Показывать заметки в открытом дневнике<span class="desc">Если выключено, другие увидят цифры и категории, но не текст заметок.</span></span>
-        </label>
-        <p class="form-error" id="settings-error" hidden></p>
-        <p class="form-ok" id="settings-ok" hidden></p>
-        <div class="form-row">
-          <button type="submit" id="settings-btn">Сохранить</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="settings-section">
-      <h2>Пароль</h2>
-      <form id="password-form" class="stack">
-        <div class="field text">
-          <label for="p-new">Новый пароль</label>
-          <input id="p-new" type="password" autocomplete="new-password" minlength="6" required>
-        </div>
-        <p class="form-error" id="password-error" hidden></p>
-        <p class="form-ok" id="password-ok" hidden></p>
-        <div class="form-row">
-          <button type="submit" id="password-btn">Сменить пароль</button>
-        </div>
-      </form>
-    </section>
-  </div>
-
-  <footer id="footer">Дневник давления</footer>
+  <footer>Дневник давления · <a id="gh-link" href="#" target="_blank" rel="noopener">файл с записями на GitHub</a></footer>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
 (function () {
   var LEGACY_KEY = 'bp-diary-readings-v1';
+  var TOKEN_KEY = 'bp-diary-github-token';
+  var API = 'https://api.github.com';
+
+  // ---------- где лежат данные ----------
   var cfg = window.BP_CONFIG || {};
+  var repo = detectRepo();
+  function detectRepo() {
+    var r = { owner: cfg.owner || '', repo: cfg.repo || '', branch: cfg.branch || 'main', path: cfg.path || 'data/readings.json' };
+    // Сайт на GitHub Pages: логин.github.io/репозиторий/
+    var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname);
+    if (m) {
+      var seg = location.pathname.split('/').filter(Boolean)[0];
+      r.owner = m[1];
+      if (seg && !/\.html?$/i.test(seg)) r.repo = seg;
+      else if (!r.repo) r.repo = m[1] + '.github.io';
+    }
+    return r;
+  }
 
   // ---------- элементы ----------
   function $(id) { return document.getElementById(id); }
-  var views = { auth: $('view-auth'), diary: $('view-diary'), users: $('view-users'), settings: $('view-settings') };
-  var nav = $('nav');
-  var userChip = $('user-chip');
-  var chipName = $('chip-name');
-  var logoutBtn = $('logout-btn');
-  var setupBanner = $('setup-banner');
-  var globalError = $('global-error');
-  var globalErrorText = $('global-error-text');
-  var subtitle = $('subtitle');
-
-  var tabLogin = $('tab-login'), tabRegister = $('tab-register');
-  var loginForm = $('login-form'), registerForm = $('register-form');
-  var loginError = $('login-error'), loginOk = $('login-ok'), loginBtn = $('login-btn'), resetBtn = $('reset-btn');
-  var registerError = $('register-error'), registerOk = $('register-ok'), registerBtn = $('register-btn');
-
-  var ownerHead = $('owner-head'), ownerTitle = $('owner-title'), ownerLogin = $('owner-login'), ownerBadge = $('owner-badge');
-  var closedBanner = $('closed-banner');
+  var syncEl = $('sync');
+  var globalError = $('global-error'), globalErrorText = $('global-error-text');
+  var tokenBanner = $('token-banner');
   var localBanner = $('local-banner'), localCount = $('local-count'), localImportBtn = $('local-import-btn'), localDiscardBtn = $('local-discard-btn');
-
-  var form = $('add-form');
-  var addCard = $('add-card');
-  var addBtn = $('add-btn');
-  var formError = $('form-error');
-  var summaryEl = $('summary');
-  var historySection = $('history-section');
-  var tbody = $('tbody');
-  var table = $('table');
-  var emptyState = $('empty-state');
-  var countEl = $('count');
-  var detailsToggle = $('details-toggle');
-  var dailyBlocksEl = $('daily-blocks');
-  var dataSection = $('data-section');
-  var exportBtn = $('export-btn');
-  var importBtn = $('import-btn');
-  var importFile = $('import-file');
-  var dataStatus = $('data-status');
-
+  var form = $('add-form'), addBtn = $('add-btn'), formError = $('form-error');
+  var summaryEl = $('summary'), tbody = $('tbody'), table = $('table'), emptyState = $('empty-state'), countEl = $('count');
+  var detailsToggle = $('details-toggle'), dailyBlocksEl = $('daily-blocks');
+  var exportBtn = $('export-btn'), importBtn = $('import-btn'), importFile = $('import-file'), dataStatus = $('data-status');
   var fSys = $('f-sys'), fDia = $('f-dia'), fPulse = $('f-pulse'), fDate = $('f-date'), fTime = $('f-time'), fNote = $('f-note');
+  var ghConnected = $('gh-connected'), ghSetup = $('gh-setup'), ghUser = $('gh-user'), ghDisconnect = $('gh-disconnect');
+  var tokenForm = $('token-form'), fToken = $('f-token'), tokenBtn = $('token-btn'), tokenError = $('token-error');
 
-  var usersSearch = $('users-search'), usersStatus = $('users-status'), usersList = $('users-list'), usersEmpty = $('users-empty');
-
-  var sUsername = $('s-username'), sEmail = $('s-email'), sName = $('s-name'), sPublic = $('s-public'), sNotes = $('s-notes');
-  var settingsForm = $('settings-form'), settingsError = $('settings-error'), settingsOk = $('settings-ok'), settingsBtn = $('settings-btn');
-  var passwordForm = $('password-form'), pNew = $('p-new'), passwordError = $('password-error'), passwordOk = $('password-ok'), passwordBtn = $('password-btn');
+  $('gh-path').textContent = repo.path;
+  $('gh-repo').textContent = repo.owner + '/' + repo.repo;
+  $('gh-link').href = 'https://github.com/' + repo.owner + '/' + repo.repo + '/blob/' + repo.branch + '/' + repo.path;
 
   // ---------- состояние ----------
-  var state = {
-    user: null,        // объект пользователя Supabase
-    profile: null,     // строка из profiles
-    readings: [],      // свои записи, отсортированы по убыванию dateTime
-    viewing: null,     // { username, displayName, isPublic, readings|null } — чужой дневник
-    users: []          // кэш списка пользователей
-  };
-  var sb = null;
+  var state = { readings: [], sha: null, token: getToken(), loaded: false };
 
-  // ---------- утилиты ----------
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-  function escapeHtml(s) {
-    var div = document.createElement('div');
-    div.textContent = s == null ? '' : String(s);
-    return div.innerHTML;
-  }
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(t) { try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {} state.token = t || ''; }
+
+  function setSync(kind, text) { syncEl.className = 'sync ' + kind; syncEl.textContent = text; }
+  function showGlobalError(text) { globalErrorText.textContent = text || ''; globalError.hidden = !text; }
   function showMsg(el, text) { el.textContent = text; el.hidden = !text; }
-  function setBusy(btn, busy) { btn.disabled = !!busy; }
-  function showGlobalError(text) { globalErrorText.textContent = text; globalError.hidden = !text; }
 
-  function translateError(err) {
-    var m = (err && (err.message || err.error_description || err.msg)) || String(err || '');
-    var map = [
-      [/invalid login credentials/i, 'Неверный email или пароль.'],
-      [/email not confirmed/i, 'Email ещё не подтверждён: откройте письмо от Supabase и перейдите по ссылке.'],
-      [/user already registered/i, 'Пользователь с таким email уже зарегистрирован.'],
-      [/password should be at least/i, 'Пароль слишком короткий.'],
-      [/rate limit/i, 'Слишком много попыток. Подождите минуту и попробуйте снова.'],
-      [/failed to fetch|networkerror|load failed/i, 'Нет связи с сервером. Проверьте интернет.'],
-      [/jwt|token/i, 'Сессия истекла. Войдите заново.'],
-      [/database error saving new user/i, 'Не удалось создать профиль. Проверьте, что схема базы применена.']
-    ];
-    for (var i = 0; i < map.length; i++) if (map[i][0].test(m)) return map[i][1];
-    return 'Ошибка: ' + m;
+  // ---------- GitHub API ----------
+  function ghHeaders() {
+    var h = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (state.token) h['Authorization'] = 'Bearer ' + state.token;
+    return h;
+  }
+  function contentsUrl() {
+    return API + '/repos/' + encodeURIComponent(repo.owner) + '/' + encodeURIComponent(repo.repo) + '/contents/' +
+      repo.path.split('/').map(encodeURIComponent).join('/');
+  }
+  function utf8ToBase64(str) {
+    var bytes = new TextEncoder().encode(str), bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function base64ToUtf8(b64) {
+    var bin = atob(b64.replace(/\s/g, '')), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function describeHttpError(status, body) {
+    var msg = body && body.message ? body.message : '';
+    if (status === 401) return 'GitHub не принял токен. Проверьте, что он скопирован целиком и не истёк.';
+    if (status === 403 && /rate limit/i.test(msg)) return 'GitHub ограничил число запросов. Подключите токен или подождите час.';
+    if (status === 403) return 'Токен не даёт права на запись в этот репозиторий. Нужно разрешение Contents: Read and write.';
+    if (status === 404) return 'Репозиторий ' + repo.owner + '/' + repo.repo + ' не найден или токен не имеет к нему доступа.';
+    if (status === 409 || status === 422) return 'Файл изменился на GitHub, пока вы работали. Обновите страницу и повторите.';
+    return 'GitHub ответил ошибкой ' + status + (msg ? ': ' + msg : '') + '.';
+  }
+  function ghFetch(url, opts) {
+    return fetch(url, opts).then(function (res) {
+      return res.text().then(function (text) {
+        var body = null;
+        try { body = text ? JSON.parse(text) : null; } catch (e) {}
+        return { status: res.status, ok: res.ok, body: body };
+      });
+    }, function () {
+      throw new Error('Нет связи с GitHub. Проверьте интернет.');
+    });
   }
 
-  function fromRow(r) {
-    return {
-      id: r.id,
-      systolic: r.systolic,
-      diastolic: r.diastolic,
-      pulse: r.pulse == null ? null : r.pulse,
-      date: r.date,
-      time: r.time || null,
-      period: r.period || null,
-      arm: r.arm || null,
-      dateTime: r.date_time,
-      note: r.note || ''
+  // Читаем файл с записями. Возвращает { list, sha }.
+  function fetchRemote() {
+    return ghFetch(contentsUrl() + '?ref=' + encodeURIComponent(repo.branch) + '&t=' + Date.now(), { headers: ghHeaders(), cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 404) return { list: [], sha: null };
+        if (!r.ok) throw new Error(describeHttpError(r.status, r.body));
+        var list = [];
+        try { list = JSON.parse(base64ToUtf8(r.body.content || '')); } catch (e) { list = []; }
+        return { list: Array.isArray(list) ? list : [], sha: r.body.sha };
+      });
+  }
+
+  // Записываем файл. При конфликте перечитываем и применяем изменение заново.
+  function commit(mutate, message, attempt) {
+    attempt = attempt || 0;
+    var next = mutate(state.readings.slice());
+    var payload = {
+      message: message,
+      content: utf8ToBase64(JSON.stringify(next, null, 2) + '\n'),
+      branch: repo.branch
     };
-  }
-  function toRow(x) {
-    return {
-      user_id: state.user.id,
-      systolic: x.systolic,
-      diastolic: x.diastolic,
-      pulse: x.pulse == null ? null : x.pulse,
-      date: x.date,
-      time: x.time || null,
-      period: x.period || null,
-      arm: x.arm || null,
-      date_time: x.dateTime,
-      note: x.note || ''
-    };
-  }
-  function sortReadings(list) {
-    return list.slice().sort(function (a, b) { return (b.dateTime || '').localeCompare(a.dateTime || ''); });
+    if (state.sha) payload.sha = state.sha;
+    return ghFetch(contentsUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(payload) })
+      .then(function (r) {
+        if ((r.status === 409 || r.status === 422) && attempt < 2) {
+          return fetchRemote().then(function (remote) {
+            state.readings = sortReadings(remote.list);
+            state.sha = remote.sha;
+            return commit(mutate, message, attempt + 1);
+          });
+        }
+        if (!r.ok) throw new Error(describeHttpError(r.status, r.body));
+        state.readings = sortReadings(next);
+        state.sha = r.body.content.sha;
+        return r.body.commit && r.body.commit.sha;
+      });
   }
 
-  // ---------- переключатели формы ----------
+  // Изменения идут по очереди, чтобы два коммита не столкнулись.
+  var queue = Promise.resolve();
+  function enqueue(mutate, message) {
+    if (!state.token) {
+      return Promise.reject(new Error('Сначала подключите GitHub в разделе «Хранение».'));
+    }
+    var run = queue.then(function () {
+      setSync('busy', 'Сохранение…');
+      return commit(mutate, message);
+    }).then(function (sha) {
+      setSync('ok', 'Сохранено' + (sha ? ' · ' + sha.slice(0, 7) : ''));
+      render();
+    }, function (err) {
+      setSync('error', 'Не сохранено');
+      throw err;
+    });
+    queue = run.catch(function () {});
+    return run;
+  }
+
+  // ---------- переключатели ----------
   detailsToggle.addEventListener('click', function () {
     var willShow = dailyBlocksEl.hidden;
     dailyBlocksEl.hidden = !willShow;
@@ -771,6 +639,7 @@
   var periodToggle = makeToggle($('period-toggle'));
   var armToggle = makeToggle($('arm-toggle'));
 
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
   var now = new Date();
   fDate.value = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
   fTime.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
@@ -806,8 +675,7 @@
   }
 
   function buildDayGroups(readings) {
-    var map = {};
-    var dates = [];
+    var map = {}, dates = [];
     readings.forEach(function (r) {
       if (!map[r.date]) { map[r.date] = []; dates.push(r.date); }
       map[r.date].push(r);
@@ -823,6 +691,12 @@
       });
       return { date: date, readings: list, avgSys: Math.round(sumSys / list.length), avgDia: Math.round(sumDia / list.length), worst: worst };
     });
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s == null ? '' : String(s);
+    return div.innerHTML;
   }
 
   function renderDayBlocks(readings) {
@@ -852,33 +726,17 @@
     }).join('');
   }
 
-  // ---------- рендер дневника ----------
-  function renderDiary() {
-    var viewing = state.viewing;
-    var readOnly = !!viewing;
-    var readings = readOnly ? (viewing.readings || []) : state.readings;
-
-    ownerHead.hidden = !readOnly;
-    addCard.hidden = readOnly;
-    dataSection.hidden = readOnly;
-    var closed = readOnly && viewing.readings === null;
-    closedBanner.hidden = !closed;
-    summaryEl.hidden = closed;
-    historySection.hidden = closed;
-    if (!readOnly) refreshLocalBanner(); else localBanner.hidden = true;
-
-    if (readOnly) {
-      ownerTitle.textContent = viewing.displayName || '@' + viewing.username;
-      ownerLogin.textContent = '@' + viewing.username;
-      ownerBadge.textContent = viewing.isPublic ? 'открытый дневник' : 'закрытый дневник';
-      ownerBadge.className = 'badge ' + (viewing.isPublic ? 'open' : 'closed');
-    }
+  function render() {
+    var readings = state.readings;
+    refreshLocalBanner();
+    tokenBanner.hidden = !!state.token || !state.loaded;
+    ghConnected.hidden = !state.token;
+    ghSetup.hidden = !!state.token;
 
     if (!readings.length) {
       summaryEl.innerHTML = '<p class="summary-empty">Пока нет ни одного измерения.</p>';
       table.hidden = true;
       emptyState.hidden = false;
-      emptyState.textContent = readOnly ? 'В этом дневнике пока нет записей.' : 'Записей пока нет — добавьте первое измерение выше.';
       countEl.textContent = '';
       detailsToggle.hidden = true;
       dailyBlocksEl.hidden = true;
@@ -921,201 +779,90 @@
         '<td class="nums">' + (r.pulse || '—') + '</td>' +
         '<td><span class="badge ' + c.key + '">' + c.label + '</span></td>' +
         '<td class="note">' + (r.note ? escapeHtml(r.note) : '') + '</td>' +
-        '<td>' + (readOnly ? '' : '<button class="del-btn" data-id="' + escapeHtml(r.id) + '" title="Удалить">×</button>') + '</td>' +
+        '<td><button class="del-btn" data-id="' + escapeHtml(r.id) + '" title="Удалить">×</button></td>' +
         '</tr>';
     }).join('');
   }
+
+  function sortReadings(list) {
+    return list.slice().sort(function (a, b) { return (b.dateTime || '').localeCompare(a.dateTime || ''); });
+  }
+  function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
   // ---------- старые записи из localStorage ----------
   function loadLegacy() {
     var raw;
     try { raw = localStorage.getItem(LEGACY_KEY); } catch (e) { return []; }
     if (!raw) return [];
-    try {
-      var list = JSON.parse(raw);
-      return Array.isArray(list) ? list : [];
-    } catch (e) { return []; }
+    try { var list = JSON.parse(raw); return Array.isArray(list) ? list : []; } catch (e) { return []; }
   }
-  function clearLegacy() {
-    try { localStorage.removeItem(LEGACY_KEY); } catch (e) {}
-  }
+  function clearLegacy() { try { localStorage.removeItem(LEGACY_KEY); } catch (e) {} }
   function refreshLocalBanner() {
     var legacy = loadLegacy();
-    localBanner.hidden = !legacy.length;
+    localBanner.hidden = !legacy.length || !state.loaded;
     localCount.textContent = legacy.length;
   }
 
-  // ---------- маршрутизация ----------
-  function showView(name, navName) {
-    Object.keys(views).forEach(function (k) { views[k].hidden = k !== name; });
-    Array.prototype.forEach.call(nav.querySelectorAll('a'), function (a) {
-      a.classList.toggle('active', a.getAttribute('data-route') === (navName || name));
+  function normalizeImported(list, known) {
+    var out = [];
+    list.forEach(function (r) {
+      if (!r || typeof r.systolic !== 'number' || typeof r.diastolic !== 'number' || !r.date) return;
+      if (r.systolic < 40 || r.systolic > 300 || r.diastolic < 20 || r.diastolic > 200) return;
+      var date = String(r.date).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      var time = typeof r.time === 'string' && /^\d{2}:\d{2}$/.test(r.time) ? r.time : null;
+      var id = r.id && !known[r.id] ? String(r.id) : makeId();
+      known[id] = true;
+      out.push({
+        id: id,
+        systolic: r.systolic,
+        diastolic: r.diastolic,
+        pulse: typeof r.pulse === 'number' && r.pulse >= 20 && r.pulse <= 250 ? r.pulse : null,
+        date: date,
+        time: time,
+        period: r.period === 'morning' || r.period === 'evening' ? r.period : null,
+        arm: r.arm === 'left' || r.arm === 'right' ? r.arm : null,
+        dateTime: typeof r.dateTime === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(r.dateTime) ? r.dateTime.slice(0, 16) : date + 'T' + (time || '12:00'),
+        note: String(r.note || '').slice(0, 80)
+      });
     });
+    return out;
   }
 
-  var pendingError = '';
-  function route() {
-    showGlobalError(pendingError);
-    pendingError = '';
-    if (!sb) { showView('auth'); views.auth.hidden = true; return; }
-    if (!state.user) { showView('auth'); return; }
-    var h = location.hash || '#/';
-    if (h.indexOf('#/u/') === 0) {
-      openUser(decodeURIComponent(h.slice(4)));
-    } else if (h === '#/users') {
-      showView('users');
-      loadUsers();
-    } else if (h === '#/settings') {
-      showView('settings');
-      fillSettings();
-    } else {
-      state.viewing = null;
-      showView('diary');
-      renderDiary();
-    }
+  function appendMany(incoming, message) {
+    var added = 0;
+    return enqueue(function (list) {
+      var known = {};
+      list.forEach(function (r) { known[r.id] = true; });
+      var clean = normalizeImported(incoming, known);
+      added = clean.length;
+      return list.concat(clean);
+    }, message).then(function () { return added; });
   }
-  window.addEventListener('hashchange', route);
 
-  // ---------- авторизация ----------
-  function setAuthTab(which) {
-    var login = which === 'login';
-    tabLogin.classList.toggle('active', login);
-    tabRegister.classList.toggle('active', !login);
-    loginForm.hidden = !login;
-    registerForm.hidden = login;
-  }
-  tabLogin.addEventListener('click', function () { setAuthTab('login'); });
-  tabRegister.addEventListener('click', function () { setAuthTab('register'); });
-
-  loginForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    showMsg(loginError, ''); showMsg(loginOk, '');
-    setBusy(loginBtn, true);
-    sb.auth.signInWithPassword({ email: $('l-email').value.trim(), password: $('l-pass').value })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        // дальше сработает onAuthStateChange
+  localImportBtn.addEventListener('click', function () {
+    var legacy = loadLegacy();
+    localImportBtn.disabled = true;
+    appendMany(legacy, 'Перенос ' + legacy.length + ' записей из браузера')
+      .then(function (added) {
+        clearLegacy();
+        dataStatus.textContent = 'Перенесено записей: ' + added + '.';
+        render();
       })
-      .catch(function (err) { showMsg(loginError, translateError(err)); })
-      .then(function () { setBusy(loginBtn, false); });
+      .catch(function (err) { showGlobalError('Не удалось перенести записи. ' + err.message); })
+      .then(function () { localImportBtn.disabled = false; });
+  });
+  localDiscardBtn.addEventListener('click', function () {
+    if (!confirm('Удалить старые записи из этого браузера без переноса?')) return;
+    clearLegacy();
+    refreshLocalBanner();
   });
 
-  resetBtn.addEventListener('click', function () {
-    var email = $('l-email').value.trim();
-    showMsg(loginError, ''); showMsg(loginOk, '');
-    if (!email) { showMsg(loginError, 'Введите email, на который зарегистрирован аккаунт.'); return; }
-    setBusy(resetBtn, true);
-    sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        showMsg(loginOk, 'Письмо для смены пароля отправлено на ' + email + '.');
-      })
-      .catch(function (err) { showMsg(loginError, translateError(err)); })
-      .then(function () { setBusy(resetBtn, false); });
-  });
-
-  registerForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    showMsg(registerError, ''); showMsg(registerOk, '');
-    var username = $('r-username').value.trim().toLowerCase();
-    var displayName = $('r-name').value.trim();
-    var email = $('r-email').value.trim();
-    var password = $('r-pass').value;
-    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
-      showMsg(registerError, 'Логин: 3–20 символов, только латинские буквы, цифры и подчёркивание.');
-      return;
-    }
-    setBusy(registerBtn, true);
-    sb.rpc('username_available', { p_username: username })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        if (res.data === false) throw new Error('Логин @' + username + ' уже занят, выберите другой.');
-        return sb.auth.signUp({
-          email: email,
-          password: password,
-          options: { data: { username: username, display_name: displayName } }
-        });
-      })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        if (!res.data.session) {
-          showMsg(registerOk, 'Аккаунт создан. Подтвердите email по ссылке из письма, затем войдите.');
-          setAuthTab('login');
-          $('l-email').value = email;
-          showMsg(loginOk, 'Подтвердите email по ссылке из письма, затем войдите.');
-        }
-        // при отключённом подтверждении сессия уже есть — сработает onAuthStateChange
-      })
-      .catch(function (err) { showMsg(registerError, translateError(err)); })
-      .then(function () { setBusy(registerBtn, false); });
-  });
-
-  logoutBtn.addEventListener('click', function () {
-    sb.auth.signOut().catch(function () {});
-    onSignedOut();
-  });
-
-  function onSignedOut() {
-    state.user = null;
-    state.profile = null;
-    state.readings = [];
-    state.viewing = null;
-    state.users = [];
-    userChip.hidden = true;
-    nav.hidden = true;
-    setAuthTab('login');
-    showMsg(loginError, ''); showMsg(registerError, ''); showMsg(registerOk, '');
-    $('l-pass').value = '';
-    location.hash = '#/';
-    route();
-  }
-
-  function onSignedIn(user) {
-    state.user = user;
-    return loadProfile()
-      .then(loadReadings)
-      .then(function () {
-        chipName.textContent = '@' + state.profile.username;
-        userChip.hidden = false;
-        nav.hidden = false;
-        route();
-      })
-      .catch(function (err) { showGlobalError(translateError(err)); });
-  }
-
-  function loadProfile() {
-    return sb.from('profiles').select('*').eq('id', state.user.id).maybeSingle()
-      .then(function (res) {
-        if (res.error) throw res.error;
-        if (!res.data) throw new Error('Профиль не найден. Проверьте, что схема базы (supabase/schema.sql) применена.');
-        state.profile = res.data;
-      });
-  }
-
-  function loadReadings() {
-    return sb.from('readings').select('*').eq('user_id', state.user.id).order('date_time', { ascending: false })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        state.readings = sortReadings(res.data.map(fromRow));
-      });
-  }
-
-  // ---------- записи ----------
-  function insertReadings(list) {
-    if (!list.length) return Promise.resolve([]);
-    var rows = list.map(toRow);
-    return sb.from('readings').insert(rows).select()
-      .then(function (res) {
-        if (res.error) throw res.error;
-        var added = res.data.map(fromRow);
-        state.readings = sortReadings(state.readings.concat(added));
-        return added;
-      });
-  }
-
+  // ---------- добавление и удаление ----------
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     showMsg(formError, '');
+    showGlobalError('');
 
     var sys = parseInt(fSys.value, 10);
     var dia = parseInt(fDia.value, 10);
@@ -1130,82 +877,38 @@
       showMsg(formError, 'Проверьте значение пульса.');
       return;
     }
-    if (!fDate.value) {
-      showMsg(formError, 'Укажите дату.');
-      return;
-    }
+    if (!fDate.value) { showMsg(formError, 'Укажите дату.'); return; }
 
     var time = fTime.value || null;
     var period = periodToggle.get();
     var arm = armToggle.get();
     var sortTime = time || (period === 'morning' ? '06:00' : period === 'evening' ? '18:00' : '12:00');
-
-    setBusy(addBtn, true);
-    insertReadings([{
-      systolic: sys, diastolic: dia, pulse: pulse, date: fDate.value, time: time,
+    var reading = {
+      id: makeId(), systolic: sys, diastolic: dia, pulse: pulse, date: fDate.value, time: time,
       period: period, arm: arm, dateTime: fDate.value + 'T' + sortTime, note: note
-    }])
+    };
+
+    addBtn.disabled = true;
+    enqueue(function (list) { list.push(reading); return list; },
+            'Измерение ' + formatDate(reading.date) + ' ' + sys + '/' + dia + (pulse ? ' пульс ' + pulse : ''))
       .then(function () {
         fSys.value = ''; fDia.value = ''; fPulse.value = ''; fNote.value = '';
         fSys.focus();
-        renderDiary();
       })
-      .catch(function (err) { showMsg(formError, 'Не удалось сохранить. ' + translateError(err)); })
-      .then(function () { setBusy(addBtn, false); });
+      .catch(function (err) { showMsg(formError, 'Не удалось сохранить. ' + err.message); })
+      .then(function () { addBtn.disabled = false; });
   });
 
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest('.del-btn');
-    if (!btn || state.viewing) return;
+    if (!btn) return;
     var id = btn.getAttribute('data-id');
+    var r = state.readings.filter(function (x) { return x.id === id; })[0];
     btn.disabled = true;
-    sb.from('readings').delete().eq('id', id)
-      .then(function (res) {
-        if (res.error) throw res.error;
-        state.readings = state.readings.filter(function (r) { return r.id !== id; });
-        renderDiary();
-      })
-      .catch(function (err) { btn.disabled = false; showGlobalError('Не удалось удалить запись. ' + translateError(err)); });
-  });
-
-  // ---------- перенос старых записей ----------
-  function normalizeImported(list) {
-    var out = [];
-    list.forEach(function (r) {
-      if (!r || typeof r.systolic !== 'number' || typeof r.diastolic !== 'number' || !r.date) return;
-      if (r.systolic < 40 || r.systolic > 300 || r.diastolic < 20 || r.diastolic > 200) return;
-      var pulse = typeof r.pulse === 'number' && r.pulse >= 20 && r.pulse <= 250 ? r.pulse : null;
-      var time = typeof r.time === 'string' && /^\d{2}:\d{2}$/.test(r.time) ? r.time : null;
-      var period = r.period === 'morning' || r.period === 'evening' ? r.period : null;
-      var arm = r.arm === 'left' || r.arm === 'right' ? r.arm : null;
-      var date = String(r.date).slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-      var dateTime = typeof r.dateTime === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(r.dateTime)
-        ? r.dateTime.slice(0, 16) : date + 'T' + (time || '12:00');
-      out.push({
-        systolic: r.systolic, diastolic: r.diastolic, pulse: pulse, date: date, time: time,
-        period: period, arm: arm, dateTime: dateTime, note: String(r.note || '').slice(0, 80)
-      });
-    });
-    return out;
-  }
-
-  localImportBtn.addEventListener('click', function () {
-    var list = normalizeImported(loadLegacy());
-    setBusy(localImportBtn, true);
-    insertReadings(list)
-      .then(function (added) {
-        clearLegacy();
-        dataStatus.textContent = 'Перенесено записей: ' + added.length + '.';
-        renderDiary();
-      })
-      .catch(function (err) { showGlobalError('Не удалось перенести записи. ' + translateError(err)); })
-      .then(function () { setBusy(localImportBtn, false); });
-  });
-  localDiscardBtn.addEventListener('click', function () {
-    if (!confirm('Удалить старые записи из этого браузера без переноса?')) return;
-    clearLegacy();
-    refreshLocalBanner();
+    showGlobalError('');
+    enqueue(function (list) { return list.filter(function (x) { return x.id !== id; }); },
+            'Удалено измерение' + (r ? ' ' + formatDate(r.date) + ' ' + r.systolic + '/' + r.diastolic : ''))
+      .catch(function (err) { btn.disabled = false; showGlobalError('Не удалось удалить запись. ' + err.message); });
   });
 
   // ---------- экспорт / импорт ----------
@@ -1231,160 +934,93 @@
     reader.onload = function () {
       var incoming;
       try { incoming = JSON.parse(reader.result); } catch (e) { incoming = null; }
+      importFile.value = '';
       if (!Array.isArray(incoming)) {
         dataStatus.textContent = 'Файл не похож на экспорт этого дневника.';
-        importFile.value = '';
         return;
       }
-      var list = normalizeImported(incoming);
-      setBusy(importBtn, true);
-      insertReadings(list)
-        .then(function (added) {
-          dataStatus.textContent = 'Импортировано записей: ' + added.length + '.';
-          renderDiary();
-        })
-        .catch(function (err) { dataStatus.textContent = 'Не удалось импортировать. ' + translateError(err); })
-        .then(function () { setBusy(importBtn, false); importFile.value = ''; });
+      importBtn.disabled = true;
+      appendMany(incoming, 'Импорт записей из файла ' + file.name)
+        .then(function (added) { dataStatus.textContent = 'Импортировано записей: ' + added + '.'; })
+        .catch(function (err) { dataStatus.textContent = 'Не удалось импортировать. ' + err.message; })
+        .then(function () { importBtn.disabled = false; });
     };
     reader.readAsText(file);
   });
 
-  // ---------- пользователи ----------
-  function loadUsers() {
-    usersStatus.textContent = 'Загрузка…';
-    sb.rpc('list_profiles')
-      .then(function (res) {
-        if (res.error) throw res.error;
-        state.users = res.data || [];
-        usersStatus.textContent = '';
-        renderUsers();
-      })
-      .catch(function (err) { usersStatus.textContent = translateError(err); });
-  }
-
-  function renderUsers() {
-    var q = usersSearch.value.trim().toLowerCase();
-    var list = state.users.filter(function (u) {
-      if (!q) return true;
-      return u.username.indexOf(q) !== -1 || (u.display_name || '').toLowerCase().indexOf(q) !== -1;
-    });
-    usersEmpty.hidden = list.length > 0;
-    usersList.innerHTML = list.map(function (u) {
-      var me = state.profile && u.username === state.profile.username;
-      var canOpen = u.is_public || me;
-      var name = escapeHtml(u.display_name || '@' + u.username);
-      var link = canOpen
-        ? '<a class="name" href="' + (me ? '#/' : '#/u/' + encodeURIComponent(u.username)) + '">' + name + '</a>'
-        : '<span class="name disabled">' + name + '</span>';
-      var meta = '';
-      if (u.readings_count != null) {
-        meta = u.readings_count + ' зап.' + (u.last_date ? ' · ' + formatDate(u.last_date) : '');
-      }
-      return '<li>' + link +
-        '<span class="login">@' + escapeHtml(u.username) + (me ? ' (вы)' : '') + '</span>' +
-        '<span class="badge ' + (u.is_public ? 'open' : 'closed') + '">' + (u.is_public ? 'открытый' : 'закрытый') + '</span>' +
-        (meta ? '<span class="meta">' + meta + '</span>' : '') +
-        '</li>';
-    }).join('');
-  }
-  usersSearch.addEventListener('input', renderUsers);
-
-  function openUser(username) {
-    username = (username || '').toLowerCase();
-    if (state.profile && username === state.profile.username) { location.hash = '#/'; return; }
-    showView('diary', 'users');
-    state.viewing = { username: username, displayName: '', isPublic: false, readings: null };
-    summaryEl.innerHTML = '<p class="summary-empty">Загрузка…</p>';
-    sb.rpc('diary_of', { p_username: username })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        var row = res.data && res.data[0];
-        if (!row) {
-          pendingError = 'Пользователь @' + username + ' не найден.';
-          location.hash = '#/users';
-          return;
-        }
-        state.viewing = {
-          username: row.username,
-          displayName: row.display_name || '',
-          isPublic: row.is_public,
-          readings: row.readings === null ? null : sortReadings(row.readings.map(fromRow))
-        };
-        renderDiary();
-      })
-      .catch(function (err) { showGlobalError(translateError(err)); });
-  }
-
-  // ---------- настройки ----------
-  function fillSettings() {
-    sUsername.textContent = '@' + state.profile.username;
-    sEmail.textContent = state.user.email || '';
-    sName.value = state.profile.display_name || '';
-    sPublic.checked = !!state.profile.is_public;
-    sNotes.checked = !!state.profile.show_notes;
-    showMsg(settingsError, ''); showMsg(settingsOk, '');
-    showMsg(passwordError, ''); showMsg(passwordOk, '');
-  }
-
-  settingsForm.addEventListener('submit', function (e) {
+  // ---------- токен GitHub ----------
+  tokenForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    showMsg(settingsError, ''); showMsg(settingsOk, '');
-    var patch = { display_name: sName.value.trim() || null, is_public: sPublic.checked, show_notes: sNotes.checked };
-    setBusy(settingsBtn, true);
-    sb.from('profiles').update(patch).eq('id', state.user.id).select().single()
-      .then(function (res) {
-        if (res.error) throw res.error;
-        state.profile = res.data;
-        showMsg(settingsOk, 'Сохранено.');
+    showMsg(tokenError, '');
+    var token = fToken.value.trim();
+    if (!token) return;
+    tokenBtn.disabled = true;
+    // Проверяем токен: кто это и есть ли доступ к репозиторию на запись.
+    var probe = { headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token } };
+    ghFetch(API + '/user', probe)
+      .then(function (r) {
+        if (r.status === 401) throw new Error('GitHub не принял токен. Проверьте, что он скопирован целиком.');
+        var login = r.ok && r.body && r.body.login ? r.body.login : '';
+        return ghFetch(API + '/repos/' + encodeURIComponent(repo.owner) + '/' + encodeURIComponent(repo.repo), probe)
+          .then(function (rr) {
+            if (rr.status === 404) throw new Error('Токен не имеет доступа к репозиторию ' + repo.owner + '/' + repo.repo + '. Выберите его в Repository access.');
+            if (!rr.ok) throw new Error(describeHttpError(rr.status, rr.body));
+            var perms = rr.body.permissions || {};
+            if (perms.push === false) throw new Error('Токен даёт только чтение. Нужно разрешение Contents: Read and write.');
+            return login;
+          });
       })
-      .catch(function (err) { showMsg(settingsError, translateError(err)); })
-      .then(function () { setBusy(settingsBtn, false); });
+      .then(function (login) {
+        setToken(token);
+        fToken.value = '';
+        ghUser.textContent = login ? ' как @' + login : '';
+        return reload();
+      })
+      .catch(function (err) { showMsg(tokenError, err.message); })
+      .then(function () { tokenBtn.disabled = false; });
   });
 
-  passwordForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    showMsg(passwordError, ''); showMsg(passwordOk, '');
-    setBusy(passwordBtn, true);
-    sb.auth.updateUser({ password: pNew.value })
-      .then(function (res) {
-        if (res.error) throw res.error;
-        pNew.value = '';
-        showMsg(passwordOk, 'Пароль изменён.');
-      })
-      .catch(function (err) { showMsg(passwordError, translateError(err)); })
-      .then(function () { setBusy(passwordBtn, false); });
+  ghDisconnect.addEventListener('click', function () {
+    setToken('');
+    ghUser.textContent = '';
+    render();
+    setSync('busy', 'Только чтение');
   });
 
-  // ---------- запуск ----------
-  function init() {
-    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey || !window.supabase) {
-      setupBanner.hidden = false;
-      subtitle.hidden = true;
-      return;
-    }
-    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-
-    var lastUserId = null;
-    sb.auth.onAuthStateChange(function (event, session) {
-      // Supabase не рекомендует ждать свои же запросы внутри колбэка,
-      // поэтому продолжаем на следующем тике.
-      setTimeout(function () {
-        var user = session && session.user;
-        if (event === 'PASSWORD_RECOVERY') {
-          // пользователь пришёл по ссылке «забыли пароль» — ведём к смене пароля
-          location.hash = '#/settings';
-        }
-        if (user) {
-          if (user.id !== lastUserId) { lastUserId = user.id; onSignedIn(user); }
-          else if (state.user) { state.user = user; }
-        } else if (lastUserId || event === 'INITIAL_SESSION') {
-          lastUserId = null;
-          onSignedOut();
-        }
-      }, 0);
-    });
+  // ---------- загрузка ----------
+  function fetchLogin() {
+    if (!state.token) return;
+    ghFetch(API + '/user', { headers: ghHeaders() })
+      .then(function (r) { if (r.ok && r.body && r.body.login) ghUser.textContent = ' как @' + r.body.login; })
+      .catch(function () {});
   }
-  init();
+  function reload() {
+    setSync('busy', 'Загрузка…');
+    showGlobalError('');
+    if (!ghUser.textContent) fetchLogin();
+    return fetchRemote()
+      .then(function (remote) {
+        state.readings = sortReadings(remote.list);
+        state.sha = remote.sha;
+        state.loaded = true;
+        setSync(state.token ? 'ok' : 'busy', state.token ? 'Синхронизировано' : 'Только чтение');
+        render();
+      })
+      .catch(function (err) {
+        state.loaded = true;
+        setSync('error', 'Нет связи');
+        showGlobalError('Не удалось загрузить записи с GitHub. ' + err.message);
+        render();
+      });
+  }
+
+  if (!repo.owner || !repo.repo) {
+    setSync('error', 'Не настроено');
+    showGlobalError('Не указан репозиторий: заполните owner и repo в config.js.');
+    render();
+  } else {
+    reload();
+  }
 })();
 </script>
 </body>
