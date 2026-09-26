@@ -320,11 +320,6 @@
 
   <div class="banner error" id="global-error" hidden><p id="global-error-text"></p></div>
 
-  <div class="banner" id="token-banner" hidden>
-    <p>Записи с GitHub загружены, но без токена сайт не сможет их сохранять. Подключите GitHub в разделе «Хранение» внизу страницы.</p>
-    <a class="ghost-btn" href="#github">Подключить</a>
-  </div>
-
   <div class="banner" id="local-banner" hidden>
     <p>В этом браузере остались записи из старой версии дневника: <strong id="local-count"></strong>. Перенести их в репозиторий?</p>
     <button type="button" class="ghost-btn" id="local-import-btn">Перенести</button>
@@ -491,7 +486,6 @@
   function $(id) { return document.getElementById(id); }
   var syncEl = $('sync');
   var globalError = $('global-error'), globalErrorText = $('global-error-text');
-  var tokenBanner = $('token-banner');
   var localBanner = $('local-banner'), localCount = $('local-count'), localImportBtn = $('local-import-btn'), localDiscardBtn = $('local-discard-btn');
   var form = $('add-form'), addBtn = $('add-btn'), formError = $('form-error');
   var summaryEl = $('summary'), tbody = $('tbody'), table = $('table'), emptyState = $('empty-state'), countEl = $('count');
@@ -729,7 +723,6 @@
   function render() {
     var readings = state.readings;
     refreshLocalBanner();
-    tokenBanner.hidden = !!state.token || !state.loaded;
     ghConnected.hidden = !state.token;
     ghSetup.hidden = !!state.token;
 
