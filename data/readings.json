@@ -298,17 +298,5 @@
     "arm": null,
     "dateTime": "2026-09-17T06:00",
     "note": "Состояние покоя"
-  },
-  {
-    "id": "muihmeoat48g8x",
-    "systolic": 220,
-    "diastolic": 123,
-    "pulse": 123,
-    "date": "2026-09-26",
-    "time": "21:20",
-    "period": "evening",
-    "arm": null,
-    "dateTime": "2026-09-26T21:20",
-    "note": ""
   }
 ]
