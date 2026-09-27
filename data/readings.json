@@ -12,6 +12,18 @@
     "note": ""
   },
   {
+    "id": "mujk8spnez8mnx",
+    "systolic": 146,
+    "diastolic": 90,
+    "pulse": 96,
+    "date": "2026-09-27",
+    "time": null,
+    "period": "morning",
+    "arm": "left",
+    "dateTime": "2026-09-27T06:00",
+    "note": ""
+  },
+  {
     "id": "oz1gfn624ot8pf3el0f8",
     "systolic": 152,
     "diastolic": 90,
@@ -312,15 +324,15 @@
     "note": "Состояние покоя"
   },
   {
-    "id": "mujk8spnez8mnx",
-    "systolic": 146,
-    "diastolic": 90,
-    "pulse": 96,
+    "id": "mujxf48ouligdh",
+    "systolic": 149,
+    "diastolic": 88,
+    "pulse": 95,
     "date": "2026-09-27",
     "time": null,
-    "period": "morning",
+    "period": "evening",
     "arm": "left",
-    "dateTime": "2026-09-27T06:00",
+    "dateTime": "2026-09-27T18:00",
     "note": ""
   }
 ]
