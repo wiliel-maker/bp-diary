@@ -1,5 +1,17 @@
 [
   {
+    "id": "mum27j09th7cct",
+    "systolic": 150,
+    "diastolic": 100,
+    "pulse": 105,
+    "date": "2026-09-29",
+    "time": null,
+    "period": "morning",
+    "arm": "right",
+    "dateTime": "2026-09-29T06:00",
+    "note": ""
+  },
+  {
     "id": "mujxf48ouligdh",
     "systolic": 149,
     "diastolic": 88,
@@ -348,14 +360,14 @@
     "note": "Состояние покоя"
   },
   {
-    "id": "mum27j09th7cct",
-    "systolic": 150,
-    "diastolic": 100,
-    "pulse": 105,
+    "id": "mum28se4kkbbzg",
+    "systolic": 154,
+    "diastolic": 98,
+    "pulse": 106,
     "date": "2026-09-29",
     "time": null,
     "period": "morning",
-    "arm": "right",
+    "arm": "left",
     "dateTime": "2026-09-29T06:00",
     "note": ""
   }
