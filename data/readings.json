@@ -12,6 +12,18 @@
     "note": ""
   },
   {
+    "id": "mujxggra69wqw9",
+    "systolic": 144,
+    "diastolic": 91,
+    "pulse": 91,
+    "date": "2026-09-27",
+    "time": null,
+    "period": "evening",
+    "arm": "right",
+    "dateTime": "2026-09-27T18:00",
+    "note": ""
+  },
+  {
     "id": "mujk8cchg2k7a1",
     "systolic": 143,
     "diastolic": 97,
@@ -336,15 +348,15 @@
     "note": "Состояние покоя"
   },
   {
-    "id": "mujxggra69wqw9",
-    "systolic": 144,
-    "diastolic": 91,
-    "pulse": 91,
-    "date": "2026-09-27",
+    "id": "mum27j09th7cct",
+    "systolic": 150,
+    "diastolic": 100,
+    "pulse": 105,
+    "date": "2026-09-29",
     "time": null,
-    "period": "evening",
+    "period": "morning",
     "arm": "right",
-    "dateTime": "2026-09-27T18:00",
+    "dateTime": "2026-09-29T06:00",
     "note": ""
   }
 ]
